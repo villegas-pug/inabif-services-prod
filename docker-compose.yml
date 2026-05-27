@@ -37,8 +37,14 @@ services:
       - CEDIF_PORT=${CEDIF_BACKEND_PORT}
       - ACERCANDONOS_SERVICE=ms-acercandonos
       - ACERCANDONOS_PORT=${ACERCANDONOS_BACKEND_PORT}
-      - SIGESU_SERVICE=ms-sigesu
-      - SIGESU_PORT=${SIGESU_BACKEND_PORT}
+      - SIGES_SERVICE=ms-siges
+      - SIGES_PORT=${SIGES_BACKEND_PORT}
+    healthcheck:
+      test: ["CMD-SHELL", "ps -ef | grep -q '[j]ava'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 # ----------------------------------------------------------------------------------------------
 # 2. MICROSERVICIOS
@@ -105,51 +111,97 @@ services:
     depends_on:
       - ms-gateway
 
-# ----------------------------------------------------------------------------------------------
-
-
-# ----------------------------------------------------------------------------------------------
-# 3. SIGEIF-APP
-# ----------------------------------------------------------------------------------------------
-  sigeif-app:
+  # ----------------------------------------------------
+  # 2.4 SERVICIO (ms-siges)
+  # ----------------------------------------------------
+  ms-siges:
     <<: *common
-    container_name: sigeif-app
+    container_name: ms-siges
     build:
-      context: ./sigeif-app
+      context: ./ms-siges/backend
       dockerfile: Dockerfile
       args:
-        - PORT_ARG=${PUNCHE_FRONTEND_PORT}
-    image: sigeif-app:latest
+        - PORT_ARG=${SIGES_BACKEND_PORT}
+    image: ms-siges:latest
+    environment:
+      - PORT=${SIGES_BACKEND_PORT}
+      - PROFILE=${SIGES_BACKEND_PROFILE}
+    expose:
+      - ${SIGES_BACKEND_PORT}
+    depends_on:
+      - ms-gateway
+
+# ----------------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------------
+# 3. APPs
+# ----------------------------------------------------------------------------------------------
+  app-proxy:
+    <<: *common
+    container_name: app-proxy
+    build:
+      context: ./app-proxy
+      dockerfile: Dockerfile
+    image: app-proxy:latest
     ports:
       - 80:80
       - 443:443
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-check-certificate -qO- https://127.0.0.1/ >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      app-sigeif:
+        condition: service_healthy
+      app-siges:
+        condition: service_healthy
+
+  app-sigeif:
+    <<: *common
+    container_name: app-sigeif
+    build:
+      context: ./app-sigeif
+      dockerfile: Dockerfile
+    image: app-sigeif:latest
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     depends_on:
       - ms-gateway
       - ms-punche
       - ms-cedif
       - ms-acercandonos
+
+  app-siges:
+    <<: *common
+    container_name: app-siges
+    build:
+      context: ./app-siges
+      dockerfile: Dockerfile
+    image: app-siges:latest
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      - ms-gateway
+      - ms-siges
     
 # ----------------------------------------------------------------------------------------------
-
-# ----------------------------------------------------------------------------------------------
-# 4. APP-CEDIF
-# ----------------------------------------------------------------------------------------------
-#  app-cedif:
-#    <<: *common
-#    container_name: app-cedif
-#    build:
-#      context: ./cedif/frontend
-#      dockerfile: Dockerfile
-#      args:
-#        - PORT_ARG=${CEDIF_FRONTEND_PORT}
-#    image: app-cedif:latest
-#    ports:
-#      - ${PUBLIC_HOST}:${CEDIF_FRONTEND_PORT}:${CEDIF_FRONTEND_PORT}
-#    depends_on:
-#      - ms-gateway
-#      - ms-cedif
-# ----------------------------------------------------------------------------------------------
-
 
 
 # ----------------------------------------------------------------------------------------------
