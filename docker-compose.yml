@@ -1,0 +1,184 @@
+# ----------------------------------------------------------------------------------------------
+# Común a todos los servicios
+# ----------------------------------------------------------------------------------------------
+
+x-base-service: &common
+  restart: unless-stopped
+  networks:
+    - sigeif-network
+
+# ----------------------------------------------------------------------------------------------
+
+
+services:
+
+# ----------------------------------------------------------------------------------------------
+# 1. GATEWAY
+# ----------------------------------------------------------------------------------------------
+
+  ms-gateway:
+    <<: *common
+    container_name: ms-gateway
+    build:
+      context: ./ms-gateway
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${GATEWAY_PORT}
+    image: gateway:latest
+    ports:
+      - ${GATEWAY_PORT}:${GATEWAY_PORT}
+    environment:
+      - PORT=${GATEWAY_PORT}
+      - PROFILE=${GATEWAY_PROFILE}
+      - ALLOWED_ORIGINS=${GATEWAY_ALLOWED_ORIGINS}
+      - PUCHE_SERVICE=ms-punche
+      - PUCHE_PORT=${PUNCHE_BACKEND_PORT}
+      - CEDIF_SERVICE=ms-cedif
+      - CEDIF_PORT=${CEDIF_BACKEND_PORT}
+      - ACERCANDONOS_SERVICE=ms-acercandonos
+      - ACERCANDONOS_PORT=${ACERCANDONOS_BACKEND_PORT}
+      - SIGESU_SERVICE=ms-sigesu
+      - SIGESU_PORT=${SIGESU_BACKEND_PORT}
+
+# ----------------------------------------------------------------------------------------------
+# 2. MICROSERVICIOS
+# ----------------------------------------------------------------------------------------------
+
+# ----------------------------------------------------
+# 2.1 SERVICIO (ms-punche)
+# ----------------------------------------------------
+  ms-punche:
+    <<: *common
+    container_name: ms-punche
+    build:
+      context: ./ms-punche/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${PUNCHE_BACKEND_PORT}
+    image: ms-punche:latest
+    environment:
+      - PORT=${PUNCHE_BACKEND_PORT}
+      - PROFILE=${PUNCHE_BACKEND_PROFILE}
+    expose:
+      - ${PUNCHE_BACKEND_PORT}
+    restart: always
+    depends_on:
+      - ms-gateway
+
+# ----------------------------------------------------
+# 2.2 SERVICIO (ms-cedif)
+# ----------------------------------------------------
+  ms-cedif:
+    <<: *common
+    container_name: ms-cedif
+    build:
+      context: ./ms-cedif/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${CEDIF_BACKEND_PORT}
+    image: ms-cedif:latest
+    environment:
+      - PORT=${CEDIF_BACKEND_PORT}
+      - PROFILE=${CEDIF_BACKEND_PROFILE}
+    expose:
+      - ${CEDIF_BACKEND_PORT}
+    depends_on:
+      - ms-gateway
+
+  # ----------------------------------------------------
+  # 2.3 SERVICIO (ms-acercandonos)
+  # ----------------------------------------------------
+  ms-acercandonos:
+    <<: *common
+    container_name: ms-acercandonos
+    build:
+      context: ./ms-acercandonos/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${ACERCANDONOS_BACKEND_PORT}
+    image: ms-acercandonos:latest
+    environment:
+      - PORT=${ACERCANDONOS_BACKEND_PORT}
+      - PROFILE=${ACERCANDONOS_BACKEND_PROFILE}
+    expose:
+      - ${ACERCANDONOS_BACKEND_PORT}
+    depends_on:
+      - ms-gateway
+
+# ----------------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------------
+# 3. SIGEIF-APP
+# ----------------------------------------------------------------------------------------------
+  sigeif-app:
+    <<: *common
+    container_name: sigeif-app
+    build:
+      context: ./sigeif-app
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${PUNCHE_FRONTEND_PORT}
+    image: sigeif-app:latest
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - ms-gateway
+      - ms-punche
+      - ms-cedif
+      - ms-acercandonos
+    
+# ----------------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------------
+# 4. APP-CEDIF
+# ----------------------------------------------------------------------------------------------
+#  app-cedif:
+#    <<: *common
+#    container_name: app-cedif
+#    build:
+#      context: ./cedif/frontend
+#      dockerfile: Dockerfile
+#      args:
+#        - PORT_ARG=${CEDIF_FRONTEND_PORT}
+#    image: app-cedif:latest
+#    ports:
+#      - ${PUBLIC_HOST}:${CEDIF_FRONTEND_PORT}:${CEDIF_FRONTEND_PORT}
+#    depends_on:
+#      - ms-gateway
+#      - ms-cedif
+# ----------------------------------------------------------------------------------------------
+
+
+
+# ----------------------------------------------------------------------------------------------
+# 5. SCHEDULING - APP
+# ----------------------------------------------------------------------------------------------
+  ms-scheduling:
+    <<: *common
+    container_name: ms-scheduling
+    build:
+      context: ./ms-scheduling/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${SCHEDULING_PORT}
+    ports:
+      - ${SCHEDULING_PORT}:${SCHEDULING_PORT}
+    environment:
+      - PORT=${SCHEDULING_PORT}
+      - PROFILE=${SCHEDULING_BACKEND_PROFILE}
+    volumes:
+      - ./ms-scheduling/resources/reports:/app/reports
+
+# ----------------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------------
+# SHARED
+# ----------------------------------------------------------------------------------------------
+networks:
+  sigeif-network:
+    name: sigeif-network
+    driver: bridge
+# ----------------------------------------------------------------------------------------------

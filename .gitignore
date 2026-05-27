@@ -1,0 +1,37 @@
+# -----------------------------
+# Build artifacts (Java/Spring)
+# -----------------------------
+**/build/
+**/target/
+*.jar
+*.war
+*.ear
+*.class
+
+# -----------------------------
+# Frontend artifacts
+# -----------------------------
+**/dist/
+**/dist_v*/
+**/node_modules/
+
+# -----------------------------
+# Docker/local volume outputs
+# -----------------------------
+**/resources/reports/
+
+# -----------------------------
+# Local environment/secrets
+# -----------------------------
+.env
+.env.*
+!.env.example
+
+# -----------------------------
+# Logs / OS / IDE files
+# -----------------------------
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
