@@ -26,6 +26,12 @@
 .env
 .env.*
 !.env.example
+certs/
+certs-bak/
+certs-bak-*/
+**/certs/*.pem
+**/certs/*.key
+**/certs/*.p12
 
 # -----------------------------
 # Logs / OS / IDE files
