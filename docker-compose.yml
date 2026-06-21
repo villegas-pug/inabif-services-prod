@@ -1,21 +1,9 @@
-# ----------------------------------------------------------------------------------------------
-# Común a todos los servicios
-# ----------------------------------------------------------------------------------------------
-
 x-base-service: &common
   restart: unless-stopped
   networks:
     - sigeif-network
 
-# ----------------------------------------------------------------------------------------------
-
-
 services:
-
-# ----------------------------------------------------------------------------------------------
-# 1. GATEWAY
-# ----------------------------------------------------------------------------------------------
-
   ms-gateway:
     <<: *common
     container_name: ms-gateway
@@ -39,6 +27,8 @@ services:
       - ACERCANDONOS_PORT=${ACERCANDONOS_BACKEND_PORT}
       - SIGES_SERVICE=ms-siges
       - SIGES_PORT=${SIGES_BACKEND_PORT}
+      - SISEC_SERVICE=ms-sisec
+      - SISEC_PORT=${SISEC_BACKEND_PORT}
     healthcheck:
       test: ["CMD-SHELL", "ps -ef | grep -q '[j]ava'"]
       interval: 30s
@@ -46,13 +36,6 @@ services:
       retries: 3
       start_period: 30s
 
-# ----------------------------------------------------------------------------------------------
-# 2. MICROSERVICIOS
-# ----------------------------------------------------------------------------------------------
-
-# ----------------------------------------------------
-# 2.1 SERVICIO (ms-punche)
-# ----------------------------------------------------
   ms-punche:
     <<: *common
     container_name: ms-punche
@@ -71,9 +54,6 @@ services:
     depends_on:
       - ms-gateway
 
-# ----------------------------------------------------
-# 2.2 SERVICIO (ms-cedif)
-# ----------------------------------------------------
   ms-cedif:
     <<: *common
     container_name: ms-cedif
@@ -91,9 +71,6 @@ services:
     depends_on:
       - ms-gateway
 
-  # ----------------------------------------------------
-  # 2.3 SERVICIO (ms-acercandonos)
-  # ----------------------------------------------------
   ms-acercandonos:
     <<: *common
     container_name: ms-acercandonos
@@ -111,9 +88,6 @@ services:
     depends_on:
       - ms-gateway
 
-  # ----------------------------------------------------
-  # 2.4 SERVICIO (ms-siges)
-  # ----------------------------------------------------
   ms-siges:
     <<: *common
     container_name: ms-siges
@@ -131,12 +105,56 @@ services:
     depends_on:
       - ms-gateway
 
-# ----------------------------------------------------------------------------------------------
+  ms-sisec:
+    <<: *common
+    container_name: ms-sisec
+    build:
+      context: ./ms-sisec/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${SISEC_BACKEND_PORT}
+    image: ms-sisec:latest
+    environment:
+      - PORT=${SISEC_BACKEND_PORT}
+      - PROFILE=${SISEC_BACKEND_PROFILE}
+    expose:
+      - ${SISEC_BACKEND_PORT}
+    depends_on:
+      - ms-gateway
 
+  ms-scheduling:
+    <<: *common
+    container_name: ms-scheduling
+    build:
+      context: ./ms-scheduling/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${SCHEDULING_PORT}
+    ports:
+      - ${SCHEDULING_PORT}:${SCHEDULING_PORT}
+    environment:
+      - PORT=${SCHEDULING_PORT}
+      - PROFILE=${SCHEDULING_BACKEND_PROFILE}
+    volumes:
+      - ./ms-scheduling/resources/reports:/app/reports
 
-# ----------------------------------------------------------------------------------------------
-# 3. APPs
-# ----------------------------------------------------------------------------------------------
+  ms-sigeir:
+    <<: *common
+    container_name: ms-sigeir
+    build:
+      context: ./ms-sigeir/backend
+      dockerfile: Dockerfile
+      args:
+        - PORT_ARG=${SIGEIR_BACKEND_PORT}
+    image: ms-sigeir:latest
+    environment:
+      - PORT=${SIGEIR_BACKEND_PORT}
+      - PROFILE=${SIGEIR_BACKEND_PROFILE}
+    expose:
+      - ${SIGEIR_BACKEND_PORT}
+    depends_on:
+      - ms-gateway
+
   app-proxy:
     <<: *common
     container_name: app-proxy
@@ -159,6 +177,10 @@ services:
       app-sigeif:
         condition: service_healthy
       app-siges:
+        condition: service_healthy
+      app-sisec:
+        condition: service_healthy
+      app-sigeir:
         condition: service_healthy
 
   app-sigeif:
@@ -200,56 +222,26 @@ services:
     depends_on:
       - ms-gateway
       - ms-siges
-    
-# ----------------------------------------------------------------------------------------------
 
-
-# ----------------------------------------------------------------------------------------------
-# 5. SCHEDULING - APP
-# ----------------------------------------------------------------------------------------------
-  ms-scheduling:
+  app-sisec:
     <<: *common
-    container_name: ms-scheduling
+    container_name: app-sisec
     build:
-      context: ./ms-scheduling/backend
+      context: ./app-sisec
       dockerfile: Dockerfile
-      args:
-        - PORT_ARG=${SCHEDULING_PORT}
-    ports:
-      - ${SCHEDULING_PORT}:${SCHEDULING_PORT}
-    environment:
-      - PORT=${SCHEDULING_PORT}
-      - PROFILE=${SCHEDULING_BACKEND_PROFILE}
-    volumes:
-      - ./ms-scheduling/resources/reports:/app/reports
-
-# ----------------------------------------------------------------------------------------------
-
-
-
-  # ----------------------------------------------------
-  # 2.5 SERVICIO (ms-sigeir)
-  # ----------------------------------------------------
-  ms-sigeir:
-    <<: *common
-    container_name: ms-sigeir
-    build:
-      context: ./ms-sigeir/backend
-      dockerfile: Dockerfile
-      args:
-        - PORT_ARG=${SIGEIR_BACKEND_PORT}
-    image: ms-sigeir:latest
-    environment:
-      - PORT=${SIGEIR_BACKEND_PORT}
-      - PROFILE=${SIGEIR_BACKEND_PROFILE}
+    image: app-sisec:latest
     expose:
-      - ${SIGEIR_BACKEND_PORT}
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     depends_on:
       - ms-gateway
+      - ms-sisec
 
-  # ----------------------------------------------------
-  # 3.x APP SIGEIR (app-sigeir)
-  # ----------------------------------------------------
   app-sigeir:
     <<: *common
     container_name: app-sigeir
@@ -269,11 +261,7 @@ services:
       - ms-gateway
       - ms-sigeir
 
-# ----------------------------------------------------------------------------------------------
-# SHARED
-# ----------------------------------------------------------------------------------------------
 networks:
   sigeif-network:
     name: sigeif-network
     driver: bridge
-# ----------------------------------------------------------------------------------------------
