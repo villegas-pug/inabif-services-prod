@@ -10,4 +10,4 @@ ENV PORT=${PORT_ARG}
 
 EXPOSE ${PORT}
 
-CMD [ "java", "-jar", "sisec-1.0.0.jar" ]
+CMD [ "java", "-jar", "educalle-1.0.jar" ]
