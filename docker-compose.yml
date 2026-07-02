@@ -1,5 +1,10 @@
 x-base-service: &common
   restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "50m"
+      max-file: "3"
   networks:
     - sigeif-network
 
