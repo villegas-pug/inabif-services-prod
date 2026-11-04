@@ -12,13 +12,16 @@
 # Frontend artifacts
 # -----------------------------
 **/dist/
-**/dist_v*/
+**/dist_[vV]*/
+**/dist_bak/
 **/node_modules/
 
 # -----------------------------
 # Docker/local volume outputs
 # -----------------------------
 **/resources/reports/
+ms-acercandonos/documentos/
+ms-acercandonos/reportes/
 
 # -----------------------------
 # Local environment/secrets
@@ -41,3 +44,62 @@ certs-bak-*/
 Thumbs.db
 .idea/
 .vscode/
+*.swp
+*.tmp
+*~
+*.pid
+nohup.out
+hs_err_pid*
+npm-debug.log*
+yarn-error.log*
+
+# -----------------------------
+# Office documents / spreadsheets / PDFs
+# -----------------------------
+*.xls
+*.xlsx
+*.xlsm
+*.csv
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.odt
+*.ods
+*.pdf
+
+# -----------------------------
+# Backups / database dumps / archives
+# -----------------------------
+*.sql
+*.dump
+*.sqlite
+*.db
+*.bak
+*.backup
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+*.rar
+
+# -----------------------------
+# Secrets / certificates (complements certs/ and .env)
+# -----------------------------
+*.jks
+*.keystore
+*.pfx
+*.crt
+*.cer
+*.csr
+id_rsa*
+
+# -----------------------------
+# IDE / build tool local files
+# -----------------------------
+.gradle/
+*.iml
+.classpath
+.project
+.settings/
