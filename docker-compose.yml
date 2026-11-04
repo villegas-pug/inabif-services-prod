@@ -79,6 +79,8 @@ services:
   ms-acercandonos:
     <<: *common
     container_name: ms-acercandonos
+    volumes:
+      - ./ms-acercandonos/documentos/anexos:/app/src/main/resources/documentos/anexos
     build:
       context: ./ms-acercandonos/backend
       dockerfile: Dockerfile
@@ -88,6 +90,7 @@ services:
     environment:
       - PORT=${ACERCANDONOS_BACKEND_PORT}
       - PROFILE=${ACERCANDONOS_BACKEND_PROFILE}
+      - TZ=America/Lima
     expose:
       - ${ACERCANDONOS_BACKEND_PORT}
     depends_on:
@@ -155,6 +158,8 @@ services:
     environment:
       - PORT=${SIGEIR_BACKEND_PORT}
       - PROFILE=${SIGEIR_BACKEND_PROFILE}
+      - SSO_INTRANET_INSECURE_SSL=true
+      - TZ=America/Lima
     expose:
       - ${SIGEIR_BACKEND_PORT}
     depends_on:
